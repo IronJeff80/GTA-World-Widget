@@ -327,16 +327,35 @@
             document.getElementById('bigfoot-val').innerText = "N/A";
         }
 
-        function getIconPath(name, isDay) {
-            name = name.toLowerCase();
-            if (name === "raining") return "icons/raining.png";
-            if (name === "drizzling") return "icons/drizzling.png";
-            if (name === "misty" || name === "hazy") return "icons/misty.png";
-            if (name === "mostly clear") return isDay ? "icons/mostlyClear-day.png" : "icons/mostlyClear-night.png";
-            if (name === "cloudy") return "icons/cloudy.png";
-            if (name.includes("cloudy")) return isDay ? "icons/partialCloudy-day.png" : "icons/partialCloudy-night.png";
-            if (name === "foggy") return "icons/foggy.png";
-            return isDay ? "icons/clear-day.png" : "icons/clear-night.png";
+        function getIconPath(n, d) {
+            n = n.toLowerCase();
+
+            // if (n.includes("rain")) return "icons/raining.png";
+            if (n.includes("rain")) return d ? "icons/raining-day.png" : "icons/raining-night.png";
+
+            // if (n.includes("drizz")) return "icons/drizzling.png";
+            if (n.includes("drizz")) return d ? "icons/drizzling-day.png" : "icons/drizzling-night.png";
+
+            if (n.includes("mist") || n.includes("hazy")) return "icons/misty.png";
+
+            // if (n.includes("fog")) return "icons/foggy.png";
+            if (n.includes("fog")) return d ? "icons/foggy-day.png" : "icons/foggy-night.png";
+            
+            // Check for "Mostly" or "Partly" first
+            if (n.includes("mostly clear")) return d ? "icons/mostlyClear-day.png" : "icons/mostlyClear-night.png";
+
+            // if (n.includes("partly") || n.includes("mostly cloudy")) {
+            //     return d ? "icons/partialCloudy-day.png" : "icons/partialCloudy-night.png";
+            // }
+            if (n.includes("partly cloudy")) return d ? "icons/partlyCloudy-day.png" : "icons/partlyCloudy-night.png";
+            if (n.includes("mostly cloudy")) return d ? "icons/mostlyCloudy-day.png" : "icons/mostlyCloudy-night.png";
+
+            // Now that the specific ones are done, check for general "Cloudy"
+            // if (n.includes("cloudy")) return "icons/cloudy.png";
+            if (n.includes("cloudy")) return d ? "icons/cloudy-day.png" : "icons/cloudy-night.png";
+
+            // Default to Clear
+            return d ? "icons/clear-day.png" : "icons/clear-night.png";
         }
 
         function formatTimer(secs) {
