@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>GTA World Widget Ver. 0.1.0</title>
+    <title>GTA World Widget - Master Sync V18 (Calibrated)</title>
     <script src="https://cdn.jsdelivr.net/npm/@streamerbot/client/dist/streamerbot-client.js"></script>
     <style>
         :root {
@@ -40,14 +40,12 @@
         .text-stack { display: flex; flex-direction: column; flex-grow: 1; text-align: right; }
         #day-label { font-size: 22px; font-weight: 800; color: var(--text-main); text-transform: uppercase; line-height: 1; }
         #time-label { font-size: 34px; font-weight: 400; color: var(--text-main); margin-top: 4px; }
-
         .event-bar { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; max-width: 380px; margin-bottom: 10px; }
         .event-card {
             background: var(--bg-white); border: 2px solid #666; border-radius: 8px; width: 52px; height: 52px;
             display: flex; align-items: center; justify-content: center; padding: 4px;
         }
         .event-card img { max-width: 100%; max-height: 100%; }
-
         .info-box {
             background: var(--bg-white); border: 2px solid var(--border-grey); border-radius: 8px; padding: 8px 12px;
             min-width: 200px; display: flex; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 8px;
@@ -58,10 +56,9 @@
         .box-val-row { display: flex; justify-content: flex-end; align-items: baseline; }
         .box-val { font-size: 16px; font-weight: 800; color: var(--text-main); }
         .box-timer { font-size: 18px; font-family: monospace; color: #e74c3c; font-weight: bold; margin-left: 8px; }
-
-        /* Diagnostics Style - Hidden by default */
-        #debug-box { border-color: #2980b9; background: #f0f7fb; min-width: 260px; display: none; }
-        .debug-text { font-family: monospace; font-size: 12px; color: #2980b9; font-weight: bold; line-height: 1.4; }
+        #debug-box { border-color: #c0392b; background: #fffcfc; min-width: 260px; display: none; }
+        .debug-text { font-family: monospace; font-size: 12px; color: #c0392b; font-weight: bold; line-height: 1.4; }
+        #debug-log { color: #2980b9; margin-top: 4px; border-top: 1px solid #ecc; padding-top: 4px; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -81,7 +78,7 @@
         <div class="box-content">
             <span class="box-label">Next Bigfoot</span>
             <div class="box-val-row">
-                <span id="bigfoot-val" class="box-val">...</span>
+                <span id="bigfoot-val" class="box-val">Searching...</span>
                 <span id="bigfoot-timer" class="box-timer">00:00:00</span>
             </div>
         </div>
@@ -115,179 +112,193 @@
             <div class="debug-text" id="debug-local">Local: --:--:--</div>
             <div class="debug-text" id="debug-unix">Unix: --------</div>
             <div class="debug-text" id="debug-game">Game: --:--</div>
-            <div class="debug-text" id="debug-index">Index: #--</div>
+            <div class="debug-text" id="debug-index">Index: #-- (---)</div>
+            <div class="debug-text" id="debug-loop">Loop: -- / 384h</div>
+            <div id="debug-log">Waiting for sync capture...</div>
         </div>
     </div>
 
     <script>
-        const MASTER_ANCHOR_UNIX = 1776660480; 
+        // SETTINGS
+        const SHOW_DIAGNOSTICS = false;
         const CURRENT_SEASON = "420WEEK"; 
         const SEASON_START   = "2026-04-16";
         const SEASON_END     = "2026-04-29";
-        const DEBUG_MODE     = false;
+        const DAY_ANCHOR     = 6; // Saturday alignment
+        const LOOP_MAX       = 384;
 
-        // --- Streamer.bot Triggers ---
+        const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        
         const triggerSchedule = {
             "21:00": { name: "Yeti", actionId: "PASTE_YETI_ID" },
             "03:00": { name: "Gooch", actionId: "PASTE_GOOCH_ID" },
             "12:00": { name: "Snowman", actionId: "PASTE_SNOWMAN_ID" }
         };
-        let lastTriggeredTime = "";
-
-        const weatherSchedule = [
-            {"weather": "Partly Cloudy", "time": 0}, {"weather": "Misty", "time": 4},
-            {"weather": "Mostly Cloudy", "time": 7}, {"weather": "Clear", "time": 11},
-            {"weather": "Misty", "time": 14},         {"weather": "Clear", "time": 16},
-            {"weather": "Misty", "time": 4},          {"weather": "Clear", "time": 7},
-            {"weather": "Hazy", "time": 17},          {"weather": "Partly Cloudy", "time": 21},
-            {"weather": "Misty", "time": 4},          {"weather": "Cloudy", "time": 7},
-            {"weather": "Foggy", "time": 14},         {"weather": "Cloudy", "time": 18},
-            {"weather": "Partly Cloudy", "time": 0}, {"weather": "Foggy", "time": 6},
-            {"weather": "Cloudy", "time": 10},       {"weather": "Mostly Clear", "time": 20},
-            {"weather": "Partly Cloudy", "time": 8}, {"weather": "Drizzling", "time": 9},
-            {"weather": "Partly Cloudy", "time": 12},{"weather": "Misty", "time": 5},
-            {"weather": "Partly Cloudy", "time": 8}, {"weather": "Raining", "time": 11},
-            {"weather": "Drizzling", "time": 14},    {"weather": "Cloudy", "time": 17},
-            {"weather": "Misty", "time": 4},         {"weather": "Mostly Cloudy", "time": 7},
-            {"weather": "Foggy", "time": 11},        {"weather": "Clear", "time": 15},
-            {"weather": "Mostly Clear", "time": 8},  {"weather": "Foggy", "time": 4},
-            {"weather": "Partly Cloudy", "time": 9}, {"weather": "Misty", "time": 4},
-            {"weather": "Mostly Clear", "time": 6},  {"weather": "Misty", "time": 4},
-            {"weather": "Mostly Clear", "time": 6},  {"weather": "Raining", "time": 7},
-            {"weather": "Drizzling", "time": 10},    {"weather": "Partly Cloudy", "time": 12},
-            {"weather": "Misty", "time": 4},         {"weather": "Partly Cloudy", "time": 6},
-            {"weather": "Cloudy", "time": 8},        {"weather": "Partly Cloudy", "time": 13},
-            {"weather": "Misty", "time": 4},         {"weather": "Partly Cloudy", "time": 7},
-            {"weather": "Mostly Cloudy", "time": 12},{"weather": "Partly Cloudy", "time": 18},
-            {"weather": "Mostly Cloudy", "time": 6}, {"weather": "Partly Cloudy", "time": 18},
-            {"weather": "Clear", "time": 1},         {"weather": "Partly Cloudy", "time": 7},
-            {"weather": "Raining", "time": 9},       {"weather": "Drizzling", "time": 16},
-            {"weather": "Partly Cloudy", "time": 17}
-        ];
 
         const eventLibrary = {
             "420WEEK": [
                 { name: "Yeti", icon: "yeti.png", startH: 21, endH: 6, msg: "❄️ A Yeti has been spotted!", notified: false },
                 { name: "Gooch", icon: "gooch.png", startH: 0, endH: 24, msg: "🎁 The Gooch is on the prowl!", notified: false },
                 { name: "Possessed Animal", icon: "posessedAnimal.png", startH: 20, endH: 1, msg: "🐾 Wildlife is acting strange...", notified: false },
-                { name: "bigfoot", icon: "bigfoot.png", startH: 7.67, endH: 8.5, reqWeather: "foggy", msg: "👣 Bigfoot spotted in the fog!", notified: false },
+                { name: "bigfoot", icon: "bigfoot.png", startH: 3.5, endH: 8.5, reqWeather: "foggy", msg: "👣 Bigfoot spotted in the fog!", notified: false },
                 { name: "Stoner Survival", icon: "stonerSurvival.png", startH: 16.33, endH: 20.33, msg: "💨 Stoner Survival active!", notified: false },
                 { name: "LS Slasher", icon: "slasher-ls.png", startH: 19, endH: 5, msg: "🔪 Slasher stalking LS...", notified: false },
-                { name: "Halloween Slashers", icon: "slasher-halloween.png", startH: 1, endH: 6, msg: "🔪 The Slashers are out tonight!", notified: false }
+                { name: "Halloween Slasher", icon: "slasher-halloween.png", startH: 1, endH: 6, msg: "🎃 Halloween Slasher arrived!", notified: false }
             ]
         };
 
+        // Calibrated 55-slot schedule
+        const weatherSchedule = [
+            {"weather": "Partly Cloudy", "duration": 4}, {"weather": "Misty", "duration": 3},
+            {"weather": "Mostly Cloudy", "duration": 4}, {"weather": "Clear", "duration": 3},
+            {"weather": "Misty", "duration": 2}, {"weather": "Clear", "duration": 12},
+            {"weather": "Misty", "duration": 3}, {"weather": "Clear", "duration": 10},
+            {"weather": "Hazy", "duration": 4}, {"weather": "Partly Cloudy", "duration": 7},
+            {"weather": "Misty", "duration": 3}, {"weather": "Cloudy", "duration": 7},
+            {"weather": "Foggy", "duration": 4}, {"weather": "Cloudy", "duration": 6},
+            {"weather": "Partly Cloudy", "duration": 6}, {"weather": "Foggy", "duration": 4},
+            {"weather": "Cloudy", "duration": 10}, {"weather": "Mostly Clear", "duration": 12},
+            {"weather": "Partly Cloudy", "duration": 1}, {"weather": "Drizzling", "duration": 3},
+            {"weather": "Partly Cloudy", "duration": 17}, {"weather": "Misty", "duration": 3},
+            {"weather": "Partly Cloudy", "duration": 3}, {"weather": "Raining", "duration": 3},
+            {"weather": "Drizzling", "duration": 3}, {"weather": "Cloudy", "duration": 11},
+            {"weather": "Misty", "duration": 3}, {"weather": "Mostly Cloudy", "duration": 4},
+            {"weather": "Foggy", "duration": 4}, {"weather": "Clear", "duration": 17},
+            {"weather": "Mostly Clear", "duration": 20}, {"weather": "Foggy", "duration": 5},
+            {"weather": "Partly Cloudy", "duration": 19}, {"weather": "Misty", "duration": 2},
+            {"weather": "Mostly Clear", "duration": 22}, {"weather": "Misty", "duration": 2},
+            {"weather": "Mostly Clear", "duration": 1}, {"weather": "Raining", "duration": 3},
+            {"weather": "Drizzling", "duration": 2}, {"weather": "Partly Cloudy", "duration": 16},
+            {"weather": "Misty", "duration": 2}, {"weather": "Partly Cloudy", "duration": 2},
+            {"weather": "Cloudy", "duration": 5}, {"weather": "Partly Cloudy", "duration": 15},
+            {"weather": "Misty", "duration": 3}, {"weather": "Partly Cloudy", "duration": 5},
+            {"weather": "Mostly Cloudy", "duration": 6}, {"weather": "Partly Cloudy", "duration": 12},
+            {"weather": "Mostly Cloudy", "duration": 12}, {"weather": "Partly Cloudy", "duration": 7},
+            {"weather": "Clear", "duration": 30}, {"weather": "Partly Cloudy", "duration": 2},
+            {"weather": "Raining", "duration": 7}, {"weather": "Drizzling", "duration": 1},
+            {"weather": "Partly Cloudy", "duration": 7}
+        ];
+
         const client = new StreamerbotClient({ host: '127.0.0.1', port: 8080 });
+        let lastLoggedHour = -1;
+        let lastTriggeredMinute = "";
+
+        function getLoopPosition(totalHours) {
+            const loopHr = totalHours % LOOP_MAX;
+            let acc = 0;
+            for (let i = 0; i < weatherSchedule.length; i++) {
+                if (loopHr >= acc && loopHr < (acc + weatherSchedule[i].duration)) {
+                    return { index: i, hourInLoop: loopHr, remaining: (acc + weatherSchedule[i].duration) - loopHr };
+                }
+                acc += weatherSchedule[i].duration;
+            }
+            return { index: 0, hourInLoop: 0, remaining: 0 };
+        }
 
         function update() {
             const now = new Date();
-            const rawUnix = Math.floor(now.getTime() / 1000);
             const todayStr = now.toISOString().split('T')[0];
+            const rawUnix = Math.floor(now.getTime() / 1000);
             
-            const elapsedGameMinutes = (rawUnix - MASTER_ANCHOR_UNIX) / 2;
-            const h = Math.floor(elapsedGameMinutes / 60) % 24;
-            const m = Math.floor(elapsedGameMinutes % 60);
+            // Core Time Math
+            const totalMinutes = Math.floor(rawUnix / 2);
+            const totalHours = Math.floor(totalMinutes / 60);
+            const h = Math.floor(totalMinutes / 60) % 24;
+            const m = totalMinutes % 60;
             const decHour = h + (m / 60);
             const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            
+            const loopData = getLoopPosition(totalHours);
+            const currentRawWeather = weatherSchedule[loopData.index].weather;
 
-            // Execute scheduled triggers
-            if (timeStr !== lastTriggeredTime) {
-                if (triggerSchedule[timeStr]) {
-                    client.executeAction(triggerSchedule[timeStr].actionId);
-                }
-                lastTriggeredTime = timeStr;
-            }
-
-            let cycleTotalHours = 0;
-            let durations = weatherSchedule.map((val, i) => {
-                let nxt = weatherSchedule[(i+1)%weatherSchedule.length].time - val.time;
-                let d = (nxt <= 0) ? nxt + 24 : nxt;
-                cycleTotalHours += d;
-                return d;
-            });
-
-            let normalizedHours = (elapsedGameMinutes / 60) % cycleTotalHours;
-            if (normalizedHours < 0) normalizedHours += cycleTotalHours;
-
-            let activeIndex = 0;
-            let checkSum = 0;
-            for(let i=0; i<weatherSchedule.length; i++) {
-                if(normalizedHours >= checkSum && normalizedHours < (checkSum + durations[i])) {
-                    activeIndex = i;
-                    break;
-                }
-                checkSum += durations[i];
-            }
-
-            // UI
-            const current = weatherSchedule[activeIndex];
-            const isDay = (h >= 6 && h < 21);
-            document.getElementById('day-label').innerText = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][Math.floor(elapsedGameMinutes / 60 / 24) % 7].toUpperCase();
-            document.getElementById('time-label').innerText = timeStr;
-            document.getElementById('weather-icon').src = getIconPath(current.weather, isDay);
-
-            // Halloween logic
-            const widget = document.getElementById('main-widget');
-            if ((todayStr >= SEASON_START && todayStr <= SEASON_END) && (h >= 19 || h < 7.67)) widget.classList.add('halloween-active');
-            else widget.classList.remove('halloween-active');
-
-            // Diagnostics Toggle
+            // Diagnostics
             const debugBox = document.getElementById('debug-box');
-            debugBox.style.display = DEBUG_MODE ? 'flex' : 'none';
-            if (DEBUG_MODE) {
+            if (SHOW_DIAGNOSTICS) {
+                debugBox.style.display = "flex";
                 document.getElementById('debug-local').innerText = `Local: ${now.toLocaleTimeString()}`;
                 document.getElementById('debug-unix').innerText = `Unix: ${rawUnix}`;
-                document.getElementById('debug-game').innerText = `Game: ${timeStr} (${decHour.toFixed(2)})`;
-                document.getElementById('debug-index').innerText = `Index: #${activeIndex} (${current.weather})`;
+                document.getElementById('debug-game').innerText = `Game: ${timeStr}`;
+                document.getElementById('debug-index').innerText = `Index: #${loopData.index} (${currentRawWeather})`;
+                document.getElementById('debug-loop').innerText = `Loop: ${loopData.hourInLoop} / 384h`;
+            } else {
+                debugBox.style.display = "none";
             }
 
-            // Sub-modules
-            updateNextWeather(activeIndex, decHour, isDay);
-            updateEventCards(todayStr, decHour, current.weather);
-            findNextBigfoot(activeIndex, decHour, rawUnix);
+            document.getElementById('day-label').innerText = days[(Math.floor(totalMinutes / 1440) + DAY_ANCHOR) % 7].toUpperCase();
+            document.getElementById('time-label').innerText = timeStr;
+
+            // Trigger logic
+            if (timeStr !== lastTriggeredMinute) {
+                if (triggerSchedule[timeStr]) {
+                    const action = triggerSchedule[timeStr];
+                    client.doAction(action.actionId, { eventName: action.name });
+                    if(SHOW_DIAGNOSTICS) document.getElementById('debug-log').innerText = `TRIGGER: ${action.name} @ ${timeStr}`;
+                }
+                lastTriggeredMinute = timeStr;
+            }
+
+            if (m === 0 && h !== lastLoggedHour) {
+                if(SHOW_DIAGNOSTICS) document.getElementById('debug-log').innerText = `SYNC CAPTURE: Game ${h}:00 @ Unix ${rawUnix}`;
+                lastLoggedHour = h;
+            }
+
+            updateWeatherDisplay(loopData, h, m, todayStr);
+            updateEventCards(todayStr, decHour, currentRawWeather);
+            findNextBigfoot(loopData, decHour, rawUnix);
             findNextSurvival(decHour, rawUnix);
         }
 
-        function updateNextWeather(idx, decHour, isDay) {
-            const nextIdx = (idx + 1) % weatherSchedule.length;
+        function updateWeatherDisplay(loopData, h, m, today) {
+            const widget = document.getElementById('main-widget');
+            const isDay = (h >= 6 && h < 21);
+            const current = weatherSchedule[loopData.index];
+            const nextIdx = (loopData.index + 1) % weatherSchedule.length;
             const next = weatherSchedule[nextIdx];
-            let remHours = next.time - decHour;
-            if (remHours < 0) remHours += 24;
+
+            document.getElementById('weather-icon').src = getIconPath(current.weather, isDay);
+            
+            // Timer for next weather (Duration remaining in current slot)
+            const finalSeconds = Math.floor(loopData.remaining * 120) - (m * 2); 
+            
             document.getElementById('next-name').innerText = next.weather;
-            const remSecs = Math.floor(remHours * 120);
-            document.getElementById('next-timer').innerText = `${Math.floor(remSecs/60)}:${(remSecs%60).toString().padStart(2,'0')}`;
+            document.getElementById('next-timer').innerText = formatTimer(finalSeconds);
             document.getElementById('next-weather-icon').src = getIconPath(next.weather, isDay);
+
+            const isHalloweenWeek = (today >= SEASON_START && today <= SEASON_END);
+            const isHalloweenHours = ((h * 60) + m >= 1140 || (h * 60) + m < 480);
+            if (isHalloweenWeek && isHalloweenHours) widget.classList.add('halloween-active');
+            else widget.classList.remove('halloween-active');
         }
 
         function updateEventCards(today, decHour, currentWeather) {
             const bar = document.getElementById('event-bar');
             bar.innerHTML = "";
-            
             if (today < SEASON_START || today > SEASON_END) return;
+
             const activeEvents = eventLibrary[CURRENT_SEASON] || [];
-            
             activeEvents.forEach(ev => {
                 const hourOk = (ev.startH < ev.endH) ? (decHour >= ev.startH && decHour < ev.endH) : (decHour >= ev.startH || decHour < ev.endH);
                 const weatherOk = !ev.reqWeather || ev.reqWeather.toLowerCase() === currentWeather.toLowerCase();
-                
-                if (hourOk && weatherOk) { 
+
+                if (hourOk && weatherOk) {
                     const card = document.createElement('div');
                     card.className = 'event-card';
                     card.innerHTML = `<img src="icons/${ev.icon}">`;
                     bar.appendChild(card);
                     
-                    if (!ev.notified && ev.msg) { 
-                        client.sendMessage(ev.msg); 
-                        ev.notified = true; 
+                    if (!ev.notified) {
+                        if (ev.msg) client.sendMessage(ev.msg);
+                        ev.notified = true;
                     }
-                } else { 
+                } else {
                     ev.notified = false; 
                 }
             });
         }
 
         function findNextSurvival(decHour, currentUnix) {
-            let waitHours = 16.33 - decHour;
+            const survivalStart = 16.33; 
+            let waitHours = survivalStart - decHour;
             if (waitHours < 0) waitHours += 24;
             const secondsUntil = Math.floor(waitHours * 120);
             const spawnDate = new Date((currentUnix + secondsUntil) * 1000);
@@ -295,60 +306,51 @@
             document.getElementById('survival-timer').innerText = formatLongTimer(secondsUntil);
         }
 
-        function findNextBigfoot(startIdx, decHour, currentUnix) {
-            let checkIdx = startIdx;
-            let cumulativeHours = 0;
-            
-            const nextIdx = (startIdx + 1) % weatherSchedule.length;
-            let diffToNext = weatherSchedule[nextIdx].time - decHour;
-            cumulativeHours = (diffToNext < 0) ? diffToNext + 24 : diffToNext;
+        function findNextBigfoot(loopData, decHour, currentUnix) {
+            let checkIdx = loopData.index;
+            let cumulativeWaitHours = loopData.remaining;
 
-            for (let i = 0; i < 60; i++) {
+            for (let i = 0; i < 100; i++) {
                 checkIdx = (checkIdx + 1) % weatherSchedule.length;
                 let block = weatherSchedule[checkIdx];
-                let nextBlockIdx = (checkIdx + 1) % weatherSchedule.length;
-                let blockEnd = weatherSchedule[nextBlockIdx].time;
-                let actualEnd = (blockEnd <= block.time) ? blockEnd + 24 : blockEnd;
-                const isFoggy = block.weather.toLowerCase() === "foggy";
-                const startsBeforeEnd = block.time < 8.5;
-                const endsAfterStart = actualEnd > 7.67;
-
-                if (isFoggy && startsBeforeEnd && endsAfterStart) {
-                    let effectiveStart = Math.max(block.time, 7.67);
-                    let waitToEffective = effectiveStart - block.time;
-                    let totalWait = cumulativeHours + waitToEffective;
-
-                    const secondsUntil = Math.floor(totalWait * 120);
+                // Bigfoot: 3:30 AM to 8:30 AM in Foggy Weather
+                // We estimate it appearing at the start of any Foggy block that overlaps that window
+                if (block.weather.toLowerCase() === "foggy") {
+                    const secondsUntil = Math.floor(cumulativeWaitHours * 120);
                     const spawnDate = new Date((currentUnix + secondsUntil) * 1000);
-                    
                     document.getElementById('bigfoot-val').innerText = spawnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                     document.getElementById('bigfoot-timer').innerText = formatLongTimer(secondsUntil);
                     return;
                 }
-
-                let dur = weatherSchedule[nextBlockIdx].time - block.time;
-                cumulativeHours += (dur <= 0) ? dur + 24 : dur;
+                cumulativeWaitHours += block.duration;
             }
-
             document.getElementById('bigfoot-val').innerText = "N/A";
-            document.getElementById('bigfoot-timer').innerText = "00:00:00";
         }
 
-        function getIconPath(n, d) {
-            n = n.toLowerCase();
-            if (n.includes("rain")) return "icons/raining.png";
-            if (n.includes("drizzle")) return "icons/drizzling.png";
-            if (n.includes("mist") || n.includes("hazy")) return "icons/misty.png";
-            if (n.includes("fog")) return "icons/foggy.png";
-            if (n.includes("mostly clear")) return d ? "icons/mostlyClear-day.png" : "icons/mostlyClear-night.png";
-            if (n.includes("cloudy")) return d ? "icons/partialCloudy-day.png" : "icons/partialCloudy-night.png";
-            return d ? "icons/clear-day.png" : "icons/clear-night.png";
+        function getIconPath(name, isDay) {
+            name = name.toLowerCase();
+            if (name === "raining") return "icons/raining.png";
+            if (name === "drizzling") return "icons/drizzling.png";
+            if (name === "misty" || name === "hazy") return "icons/misty.png";
+            if (name === "mostly clear") return isDay ? "icons/mostlyClear-day.png" : "icons/mostlyClear-night.png";
+            if (name === "cloudy") return "icons/cloudy.png";
+            if (name.includes("cloudy")) return isDay ? "icons/partialCloudy-day.png" : "icons/partialCloudy-night.png";
+            if (name === "foggy") return "icons/foggy.png";
+            return isDay ? "icons/clear-day.png" : "icons/clear-night.png";
+        }
+
+        function formatTimer(secs) {
+            const totalSecs = Math.max(0, secs);
+            const m = Math.floor(totalSecs / 60);
+            const s = Math.floor(totalSecs % 60);
+            return `${m}:${s.toString().padStart(2, '0')}`;
         }
 
         function formatLongTimer(secs) {
-            const h = Math.floor(secs / 3600);
-            const m = Math.floor((secs % 3600) / 60);
-            const s = secs % 60;
+            const totalSecs = Math.max(0, secs);
+            const h = Math.floor(totalSecs / 3600);
+            const m = Math.floor((totalSecs % 3600) / 60);
+            const s = totalSecs % 60;
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
 
