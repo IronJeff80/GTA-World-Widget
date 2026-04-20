@@ -140,7 +140,7 @@
                 { name: "Yeti", icon: "yeti.png", startH: 21, endH: 6, msg: "❄️ A Yeti has been spotted!", notified: false },
                 { name: "Gooch", icon: "gooch.png", startH: 0, endH: 24, msg: "🎁 The Gooch is on the prowl!", notified: false },
                 { name: "Possessed Animal", icon: "posessedAnimal.png", startH: 20, endH: 1, msg: "🐾 Wildlife is acting strange...", notified: false },
-                { name: "bigfoot", icon: "bigfoot.png", startH: 3.5, endH: 8.5, reqWeather: "foggy", msg: "👣 Bigfoot spotted in the fog!", notified: false },
+                { name: "bigfoot", icon: "bigfoot.png", startH: 7.67, endH: 8.5, reqWeather: "foggy", msg: "👣 Bigfoot spotted in the fog!", notified: false },
                 { name: "Stoner Survival", icon: "stonerSurvival.png", startH: 16.33, endH: 20.33, msg: "💨 Stoner Survival active!", notified: false },
                 { name: "LS Slasher", icon: "slasher-ls.png", startH: 19, endH: 5, msg: "🔪 Slasher stalking LS...", notified: false },
                 { name: "Halloween Slasher", icon: "slasher-halloween.png", startH: 1, endH: 6, msg: "🎃 Halloween Slasher arrived!", notified: false }
@@ -300,61 +300,77 @@
             const survivalStart = 16.33; 
             let waitHours = survivalStart - decHour;
             if (waitHours < 0) waitHours += 24;
-            const secondsUntil = Math.floor(waitHours * 120);
+            
+            const now = new Date();
+            const secondsUntil = Math.max(0, Math.floor(waitHours * 120));
+
             const spawnDate = new Date((currentUnix + secondsUntil) * 1000);
             document.getElementById('survival-val').innerText = spawnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             document.getElementById('survival-timer').innerText = formatLongTimer(secondsUntil);
         }
 
         function findNextBigfoot(loopData, decHour, currentUnix) {
+            const BF_START = 7.67; // 7:40 AM
+            const BF_END = 8.5;    // 8:30 AM
+            
             let checkIdx = loopData.index;
-            let cumulativeWaitHours = loopData.remaining;
+            let cumulativeWaitHours = 0; 
+            
+            for (let i = 0; i < weatherSchedule.length * 2; i++) {
+                let block = weatherSchedule[checkIdx % weatherSchedule.length];
+                
+                let blockStartInGameDay = (decHour + cumulativeWaitHours) % 24;
+                let blockEndInGameDay = (blockStartInGameDay + (i === 0 ? loopData.remaining : block.duration)) % 24;
 
-            for (let i = 0; i < 100; i++) {
-                checkIdx = (checkIdx + 1) % weatherSchedule.length;
-                let block = weatherSchedule[checkIdx];
-                // Bigfoot: 3:30 AM to 8:30 AM in Foggy Weather
-                // We estimate it appearing at the start of any Foggy block that overlaps that window
-                if (block.weather.toLowerCase() === "foggy") {
-                    const secondsUntil = Math.floor(cumulativeWaitHours * 120);
-                    const spawnDate = new Date((currentUnix + secondsUntil) * 1000);
-                    document.getElementById('bigfoot-val').innerText = spawnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    document.getElementById('bigfoot-timer').innerText = formatLongTimer(secondsUntil);
-                    return;
+                const isFoggy = block.weather.toLowerCase() === "foggy";
+
+                if (isFoggy) {
+                    let targetHour = -1;
+                    
+                    if (blockStartInGameDay <= BF_START && blockEndInGameDay >= BF_START) {
+                        targetHour = BF_START;
+                    } else if (blockStartInGameDay > BF_START && blockStartInGameDay < BF_END) {
+                        targetHour = blockStartInGameDay;
+                    }
+
+                    if (targetHour !== -1) {
+                        let hoursToWait = cumulativeWaitHours;
+                        if (targetHour > blockStartInGameDay) {
+                            hoursToWait += (targetHour - blockStartInGameDay);
+                        }
+
+                        const currentHourProgress = decHour % 1;
+                        const secondsUntil = Math.max(0, Math.floor((hoursToWait - currentHourProgress) * 120));
+
+                        if (secondsUntil <= 0 && (decHour >= BF_START && decHour <= BF_END)) {
+                            document.getElementById('bigfoot-val').innerText = "NOW";
+                            document.getElementById('bigfoot-timer').innerText = "00:00:00";
+                        } else {
+                            const targetUnix = currentUnix + secondsUntil;
+                            const spawnDate = new Date(targetUnix * 1000);
+                            document.getElementById('bigfoot-val').innerText = spawnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                            document.getElementById('bigfoot-timer').innerText = formatLongTimer(secondsUntil);
+                        }
+                        return;
+                    }
                 }
-                cumulativeWaitHours += block.duration;
+                cumulativeWaitHours += (i === 0) ? loopData.remaining : block.duration;
+                checkIdx++;
             }
             document.getElementById('bigfoot-val').innerText = "N/A";
+            document.getElementById('bigfoot-timer').innerText = "00:00:00";
         }
 
         function getIconPath(n, d) {
             n = n.toLowerCase();
-
-            // if (n.includes("rain")) return "icons/raining.png";
             if (n.includes("rain")) return d ? "icons/raining-day.png" : "icons/raining-night.png";
-
-            // if (n.includes("drizz")) return "icons/drizzling.png";
             if (n.includes("drizz")) return d ? "icons/drizzling-day.png" : "icons/drizzling-night.png";
-
             if (n.includes("mist") || n.includes("hazy")) return "icons/misty.png";
-
-            // if (n.includes("fog")) return "icons/foggy.png";
             if (n.includes("fog")) return d ? "icons/foggy-day.png" : "icons/foggy-night.png";
-            
-            // Check for "Mostly" or "Partly" first
             if (n.includes("mostly clear")) return d ? "icons/mostlyClear-day.png" : "icons/mostlyClear-night.png";
-
-            // if (n.includes("partly") || n.includes("mostly cloudy")) {
-            //     return d ? "icons/partialCloudy-day.png" : "icons/partialCloudy-night.png";
-            // }
             if (n.includes("partly cloudy")) return d ? "icons/partlyCloudy-day.png" : "icons/partlyCloudy-night.png";
             if (n.includes("mostly cloudy")) return d ? "icons/mostlyCloudy-day.png" : "icons/mostlyCloudy-night.png";
-
-            // Now that the specific ones are done, check for general "Cloudy"
-            // if (n.includes("cloudy")) return "icons/cloudy.png";
             if (n.includes("cloudy")) return d ? "icons/cloudy-day.png" : "icons/cloudy-night.png";
-
-            // Default to Clear
             return d ? "icons/clear-day.png" : "icons/clear-night.png";
         }
 
