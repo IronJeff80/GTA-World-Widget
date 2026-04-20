@@ -59,8 +59,8 @@
         .box-val { font-size: 16px; font-weight: 800; color: var(--text-main); }
         .box-timer { font-size: 18px; font-family: monospace; color: #e74c3c; font-weight: bold; margin-left: 8px; }
 
-        /* Diagnostics Style */
-        #debug-box { border-color: #2980b9; background: #f0f7fb; min-width: 260px; display: flex; }
+        /* Diagnostics Style - Hidden by default */
+        #debug-box { border-color: #2980b9; background: #f0f7fb; min-width: 260px; display: none; }
         .debug-text { font-family: monospace; font-size: 12px; color: #2980b9; font-weight: bold; line-height: 1.4; }
     </style>
 </head>
@@ -124,6 +124,7 @@
         const CURRENT_SEASON = "420WEEK"; 
         const SEASON_START   = "2026-04-16";
         const SEASON_END     = "2026-04-29";
+        const DEBUG_MODE     = false;
 
         const weatherSchedule = [
             {"weather": "Partly Cloudy", "time": 0}, {"weather": "Misty", "time": 4},
@@ -209,16 +210,20 @@
             document.getElementById('time-label').innerText = timeStr;
             document.getElementById('weather-icon').src = getIconPath(current.weather, isDay);
 
-            // Diagnostics Update
-            document.getElementById('debug-local').innerText = `Local: ${now.toLocaleTimeString()}`;
-            document.getElementById('debug-unix').innerText = `Unix: ${rawUnix}`;
-            document.getElementById('debug-game').innerText = `Game: ${timeStr} (${decHour.toFixed(2)})`;
-            document.getElementById('debug-index').innerText = `Index: #${activeIndex} (${current.weather})`;
-
             // Halloween logic
             const widget = document.getElementById('main-widget');
             if ((todayStr >= SEASON_START && todayStr <= SEASON_END) && (h >= 19 || h < 7.67)) widget.classList.add('halloween-active');
             else widget.classList.remove('halloween-active');
+
+            // Diagnostics Toggle
+            const debugBox = document.getElementById('debug-box');
+            debugBox.style.display = DEBUG_MODE ? 'flex' : 'none';
+            if (DEBUG_MODE) {
+                document.getElementById('debug-local').innerText = `Local: ${now.toLocaleTimeString()}`;
+                document.getElementById('debug-unix').innerText = `Unix: ${rawUnix}`;
+                document.getElementById('debug-game').innerText = `Game: ${timeStr} (${decHour.toFixed(2)})`;
+                document.getElementById('debug-index').innerText = `Index: #${activeIndex} (${current.weather})`;
+            }
 
             // Sub-modules
             updateNextWeather(activeIndex, decHour, isDay);
@@ -241,7 +246,7 @@
         function updateEventCards(today, decHour, currentWeather) {
             const bar = document.getElementById('event-bar');
             bar.innerHTML = "";
-           
+            
             const isHalloweenActive = document.getElementById('main-widget').classList.contains('halloween-active');
 
             if (today < SEASON_START || today > SEASON_END) return;
