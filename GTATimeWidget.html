@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>GTA World Widget - Restored Master Sync V22</title>
+    <title>GTA World Widget Ver. 0.1.0</title>
     <script src="https://cdn.jsdelivr.net/npm/@streamerbot/client/dist/streamerbot-client.js"></script>
     <style>
         :root {
@@ -241,18 +241,30 @@
         function updateEventCards(today, decHour, currentWeather) {
             const bar = document.getElementById('event-bar');
             bar.innerHTML = "";
+           
+            const isHalloweenActive = document.getElementById('main-widget').classList.contains('halloween-active');
+
             if (today < SEASON_START || today > SEASON_END) return;
+            
             const activeEvents = eventLibrary[CURRENT_SEASON] || [];
             activeEvents.forEach(ev => {
                 const hourOk = (ev.startH < ev.endH) ? (decHour >= ev.startH && decHour < ev.endH) : (decHour >= ev.startH || decHour < ev.endH);
                 const weatherOk = !ev.reqWeather || ev.reqWeather.toLowerCase() === currentWeather.toLowerCase();
-                if (hourOk && weatherOk) {
+                const halloweenBlock = (ev.name.toLowerCase() === "bigfoot" && isHalloweenActive);
+
+                if (hourOk && weatherOk && !halloweenBlock) {
                     const card = document.createElement('div');
                     card.className = 'event-card';
                     card.innerHTML = `<img src="icons/${ev.icon}">`;
                     bar.appendChild(card);
-                    if (!ev.notified && ev.msg) { client.sendMessage(ev.msg); ev.notified = true; }
-                } else { ev.notified = false; }
+                    
+                    if (!ev.notified && ev.msg) { 
+                        client.sendMessage(ev.msg); 
+                        ev.notified = true; 
+                    }
+                } else { 
+                    ev.notified = false; 
+                }
             });
         }
 
