@@ -126,6 +126,14 @@
         const SEASON_END     = "2026-04-29";
         const DEBUG_MODE     = false;
 
+        // --- Streamer.bot Triggers ---
+        const triggerSchedule = {
+            "21:00": { name: "Yeti", actionId: "PASTE_YETI_ID" },
+            "03:00": { name: "Gooch", actionId: "PASTE_GOOCH_ID" },
+            "12:00": { name: "Snowman", actionId: "PASTE_SNOWMAN_ID" }
+        };
+        let lastTriggeredTime = "";
+
         const weatherSchedule = [
             {"weather": "Partly Cloudy", "time": 0}, {"weather": "Misty", "time": 4},
             {"weather": "Mostly Cloudy", "time": 7}, {"weather": "Clear", "time": 11},
@@ -162,7 +170,7 @@
                 { name: "Yeti", icon: "yeti.png", startH: 21, endH: 6, msg: "❄️ A Yeti has been spotted!", notified: false },
                 { name: "Gooch", icon: "gooch.png", startH: 0, endH: 24, msg: "🎁 The Gooch is on the prowl!", notified: false },
                 { name: "Possessed Animal", icon: "posessedAnimal.png", startH: 20, endH: 1, msg: "🐾 Wildlife is acting strange...", notified: false },
-                { name: "bigfoot", icon: "bigfoot.png", startH: 3.5, endH: 8.5, reqWeather: "foggy", msg: "👣 Bigfoot spotted in the fog!", notified: false },
+                { name: "bigfoot", icon: "bigfoot.png", startH: 7.67, endH: 8.5, reqWeather: "foggy", msg: "👣 Bigfoot spotted in the fog!", notified: false },
                 { name: "Stoner Survival", icon: "stonerSurvival.png", startH: 16.33, endH: 20.33, msg: "💨 Stoner Survival active!", notified: false },
                 { name: "LS Slasher", icon: "slasher-ls.png", startH: 19, endH: 5, msg: "🔪 Slasher stalking LS...", notified: false },
                 { name: "Halloween Slashers", icon: "slasher-halloween.png", startH: 1, endH: 6, msg: "🔪 The Slashers are out tonight!", notified: false }
@@ -181,6 +189,14 @@
             const m = Math.floor(elapsedGameMinutes % 60);
             const decHour = h + (m / 60);
             const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+
+            // Execute scheduled triggers
+            if (timeStr !== lastTriggeredTime) {
+                if (triggerSchedule[timeStr]) {
+                    client.executeAction(triggerSchedule[timeStr].actionId);
+                }
+                lastTriggeredTime = timeStr;
+            }
 
             let cycleTotalHours = 0;
             let durations = weatherSchedule.map((val, i) => {
@@ -247,17 +263,14 @@
             const bar = document.getElementById('event-bar');
             bar.innerHTML = "";
             
-            const isHalloweenActive = document.getElementById('main-widget').classList.contains('halloween-active');
-
             if (today < SEASON_START || today > SEASON_END) return;
-            
             const activeEvents = eventLibrary[CURRENT_SEASON] || [];
+            
             activeEvents.forEach(ev => {
                 const hourOk = (ev.startH < ev.endH) ? (decHour >= ev.startH && decHour < ev.endH) : (decHour >= ev.startH || decHour < ev.endH);
                 const weatherOk = !ev.reqWeather || ev.reqWeather.toLowerCase() === currentWeather.toLowerCase();
-                const halloweenBlock = (ev.name.toLowerCase() === "bigfoot" && isHalloweenActive);
-
-                if (hourOk && weatherOk && !halloweenBlock) {
+                
+                if (hourOk && weatherOk) { 
                     const card = document.createElement('div');
                     card.className = 'event-card';
                     card.innerHTML = `<img src="icons/${ev.icon}">`;
@@ -285,23 +298,38 @@
         function findNextBigfoot(startIdx, decHour, currentUnix) {
             let checkIdx = startIdx;
             let cumulativeHours = 0;
+            
             const nextIdx = (startIdx + 1) % weatherSchedule.length;
             let diffToNext = weatherSchedule[nextIdx].time - decHour;
             cumulativeHours = (diffToNext < 0) ? diffToNext + 24 : diffToNext;
+
             for (let i = 0; i < 60; i++) {
                 checkIdx = (checkIdx + 1) % weatherSchedule.length;
                 let block = weatherSchedule[checkIdx];
-                if (block.weather.toLowerCase() === "foggy" && block.time >= 3.5 && block.time <= 8.5) {
-                    const secondsUntil = Math.floor(cumulativeHours * 120);
+                let nextBlockIdx = (checkIdx + 1) % weatherSchedule.length;
+                let blockEnd = weatherSchedule[nextBlockIdx].time;
+                let actualEnd = (blockEnd <= block.time) ? blockEnd + 24 : blockEnd;
+                const isFoggy = block.weather.toLowerCase() === "foggy";
+                const startsBeforeEnd = block.time < 8.5;
+                const endsAfterStart = actualEnd > 7.67;
+
+                if (isFoggy && startsBeforeEnd && endsAfterStart) {
+                    let effectiveStart = Math.max(block.time, 7.67);
+                    let waitToEffective = effectiveStart - block.time;
+                    let totalWait = cumulativeHours + waitToEffective;
+
+                    const secondsUntil = Math.floor(totalWait * 120);
                     const spawnDate = new Date((currentUnix + secondsUntil) * 1000);
+                    
                     document.getElementById('bigfoot-val').innerText = spawnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                     document.getElementById('bigfoot-timer').innerText = formatLongTimer(secondsUntil);
                     return;
                 }
-                let nextB = (checkIdx + 1) % weatherSchedule.length;
-                let dur = weatherSchedule[nextB].time - block.time;
+
+                let dur = weatherSchedule[nextBlockIdx].time - block.time;
                 cumulativeHours += (dur <= 0) ? dur + 24 : dur;
             }
+
             document.getElementById('bigfoot-val').innerText = "N/A";
             document.getElementById('bigfoot-timer').innerText = "00:00:00";
         }
