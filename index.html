@@ -48,8 +48,11 @@
         .event-card img { max-width: 100%; max-height: 100%; }
         .info-box {
             background: var(--bg-white); border: 2px solid var(--border-grey); border-radius: 8px; padding: 8px 12px;
-            min-width: 200px; display: flex; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 8px;
+            min-width: 200px; display: none; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 8px;
         }
+        /* Weather box should always show */
+        #weather-box { display: flex; }
+        
         .box-icon { width: 32px; height: 32px; margin-right: 12px; object-fit: contain; }
         .box-content { display: flex; flex-direction: column; flex-grow: 1; text-align: right; }
         .box-label { font-size: 11px; font-weight: 800; color: #888; text-transform: uppercase; display: block; }
@@ -95,7 +98,7 @@
         </div>
     </div>
 
-    <div class="info-box">
+    <div id="weather-box" class="info-box">
         <img id="next-weather-icon" src="icons/clear-day.png" class="box-icon">
         <div class="box-content">
             <span class="box-label">Next Weather</span>
@@ -121,6 +124,7 @@
     <script>
         // SETTINGS
         const SHOW_DIAGNOSTICS = false;
+        const SHOW_NEXT_WEATHER = false;
         const CURRENT_SEASON = "420WEEK"; 
         const SEASON_START   = "2026-04-16";
         const SEASON_END     = "2026-04-29";
@@ -137,17 +141,20 @@
 
         const eventLibrary = {
             "420WEEK": [
+                { name: "bigfoot", icon: "bigfoot.png", startH: 3.5, endH: 8.5, reqWeather: "foggy", msg: "👣 Bigfoot spotted in the fog!", notified: false },
+                { name: "Stoner Survival", icon: "stonerSurvival.png", startH: 16.33, endH: 20.33, msg: "💨 Stoner Survival active!", notified: false }
+            ],
+            "CHRISTMAS": [
                 { name: "Yeti", icon: "yeti.png", startH: 21, endH: 6, msg: "❄️ A Yeti has been spotted!", notified: false },
-                { name: "Gooch", icon: "gooch.png", startH: 0, endH: 24, msg: "🎁 The Gooch is on the prowl!", notified: false },
+                { name: "Gooch", icon: "gooch.png", startH: 0, endH: 24, msg: "🎁 The Gooch is on the prowl!", notified: false }
+            ],
+            "HALLOWEEN": [
                 { name: "Possessed Animal", icon: "posessedAnimal.png", startH: 20, endH: 1, msg: "🐾 Wildlife is acting strange...", notified: false },
-                { name: "bigfoot", icon: "bigfoot.png", startH: 7.67, endH: 8.5, reqWeather: "foggy", msg: "👣 Bigfoot spotted in the fog!", notified: false },
-                { name: "Stoner Survival", icon: "stonerSurvival.png", startH: 16.33, endH: 20.33, msg: "💨 Stoner Survival active!", notified: false },
                 { name: "LS Slasher", icon: "slasher-ls.png", startH: 19, endH: 5, msg: "🔪 Slasher stalking LS...", notified: false },
                 { name: "Halloween Slasher", icon: "slasher-halloween.png", startH: 1, endH: 6, msg: "🎃 Halloween Slasher arrived!", notified: false }
             ]
         };
 
-        // Calibrated 55-slot schedule
         const weatherSchedule = [
             {"weather": "Partly Cloudy", "duration": 4}, {"weather": "Misty", "duration": 3},
             {"weather": "Mostly Cloudy", "duration": 4}, {"weather": "Clear", "duration": 3},
@@ -200,7 +207,6 @@
             const todayStr = now.toISOString().split('T')[0];
             const rawUnix = Math.floor(now.getTime() / 1000);
             
-            // Core Time Math
             const totalMinutes = Math.floor(rawUnix / 2);
             const totalHours = Math.floor(totalMinutes / 60);
             const h = Math.floor(totalMinutes / 60) % 24;
@@ -211,7 +217,6 @@
             const loopData = getLoopPosition(totalHours);
             const currentRawWeather = weatherSchedule[loopData.index].weather;
 
-            // Diagnostics
             const debugBox = document.getElementById('debug-box');
             if (SHOW_DIAGNOSTICS) {
                 debugBox.style.display = "flex";
@@ -227,7 +232,6 @@
             document.getElementById('day-label').innerText = days[(Math.floor(totalMinutes / 1440) + DAY_ANCHOR) % 7].toUpperCase();
             document.getElementById('time-label').innerText = timeStr;
 
-            // Trigger logic
             if (timeStr !== lastTriggeredMinute) {
                 if (triggerSchedule[timeStr]) {
                     const action = triggerSchedule[timeStr];
@@ -242,22 +246,33 @@
                 lastLoggedHour = h;
             }
 
+            // Visibility Logic for 420 Blocks
+            const is420Active = (CURRENT_SEASON === "420WEEK" && todayStr >= SEASON_START && todayStr <= SEASON_END);
+            document.getElementById('bigfoot-box').style.display = is420Active ? "flex" : "none";
+            document.getElementById('survival-box').style.display = is420Active ? "flex" : "none";
+
             updateWeatherDisplay(loopData, h, m, todayStr);
             updateEventCards(todayStr, decHour, currentRawWeather);
-            findNextBigfoot(loopData, decHour, rawUnix);
-            findNextSurvival(decHour, rawUnix);
+            
+            if (is420Active) {
+                findNextBigfoot(loopData, decHour, rawUnix);
+                findNextSurvival(decHour, rawUnix);
+            }
         }
 
         function updateWeatherDisplay(loopData, h, m, today) {
             const widget = document.getElementById('main-widget');
+            const weatherBox = document.getElementById('weather-box');
             const isDay = (h >= 6 && h < 21);
             const current = weatherSchedule[loopData.index];
             const nextIdx = (loopData.index + 1) % weatherSchedule.length;
             const next = weatherSchedule[nextIdx];
 
+            // Toggle visibility based on SETTINGS
+            weatherBox.style.display = SHOW_NEXT_WEATHER ? "flex" : "none";
+
             document.getElementById('weather-icon').src = getIconPath(current.weather, isDay);
             
-            // Timer for next weather (Duration remaining in current slot)
             const finalSeconds = Math.floor(loopData.remaining * 120) - (m * 2); 
             
             document.getElementById('next-name').innerText = next.weather;
@@ -265,9 +280,13 @@
             document.getElementById('next-weather-icon').src = getIconPath(next.weather, isDay);
 
             const isHalloweenWeek = (today >= SEASON_START && today <= SEASON_END);
-            const isHalloweenHours = ((h * 60) + m >= 1140 || (h * 60) + m < 480);
-            if (isHalloweenWeek && isHalloweenHours) widget.classList.add('halloween-active');
-            else widget.classList.remove('halloween-active');
+            const isHalloweenHours = ((h * 60) + m >= 1140 || (h * 60) + m < 480); 
+            
+            if (CURRENT_SEASON === "HALLOWEEN" && isHalloweenWeek && isHalloweenHours) {
+                widget.classList.add('halloween-active');
+            } else {
+                widget.classList.remove('halloween-active');
+            }
         }
 
         function updateEventCards(today, decHour, currentWeather) {
@@ -300,33 +319,26 @@
             const survivalStart = 16.33; 
             let waitHours = survivalStart - decHour;
             if (waitHours < 0) waitHours += 24;
-            
-            const now = new Date();
             const secondsUntil = Math.max(0, Math.floor(waitHours * 120));
-
             const spawnDate = new Date((currentUnix + secondsUntil) * 1000);
             document.getElementById('survival-val').innerText = spawnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             document.getElementById('survival-timer').innerText = formatLongTimer(secondsUntil);
         }
 
         function findNextBigfoot(loopData, decHour, currentUnix) {
-            const BF_START = 7.67; // 7:40 AM
-            const BF_END = 8.5;    // 8:30 AM
-            
+            const BF_START = 3.5; 
+            const BF_END = 8.5;    
             let checkIdx = loopData.index;
             let cumulativeWaitHours = 0; 
             
             for (let i = 0; i < weatherSchedule.length * 2; i++) {
                 let block = weatherSchedule[checkIdx % weatherSchedule.length];
-                
                 let blockStartInGameDay = (decHour + cumulativeWaitHours) % 24;
                 let blockEndInGameDay = (blockStartInGameDay + (i === 0 ? loopData.remaining : block.duration)) % 24;
-
                 const isFoggy = block.weather.toLowerCase() === "foggy";
 
                 if (isFoggy) {
                     let targetHour = -1;
-                    
                     if (blockStartInGameDay <= BF_START && blockEndInGameDay >= BF_START) {
                         targetHour = BF_START;
                     } else if (blockStartInGameDay > BF_START && blockStartInGameDay < BF_END) {
@@ -335,10 +347,7 @@
 
                     if (targetHour !== -1) {
                         let hoursToWait = cumulativeWaitHours;
-                        if (targetHour > blockStartInGameDay) {
-                            hoursToWait += (targetHour - blockStartInGameDay);
-                        }
-
+                        if (targetHour > blockStartInGameDay) hoursToWait += (targetHour - blockStartInGameDay);
                         const currentHourProgress = decHour % 1;
                         const secondsUntil = Math.max(0, Math.floor((hoursToWait - currentHourProgress) * 120));
 
