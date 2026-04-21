@@ -37,6 +37,20 @@
 
         .halloween-active { background: var(--bg-halloween); border-color: #ff8c00; }
         .weather-icon { width: 64px; height: 64px; margin-right: 15px; object-fit: contain; }
+        
+        /* New styling for the left-aligned weather label */
+        .weather-container { display: flex; flex-direction: column; align-items: flex-start; }
+        #current-weather-label { 
+            font-size: 10px; 
+            font-weight: 800; 
+            color: #888; 
+            text-transform: uppercase; 
+            margin-top: -5px;
+            white-space: nowrap;
+            max-width: 64px; 
+            line-height: 1.1;
+        }
+
         .text-stack { display: flex; flex-direction: column; flex-grow: 1; text-align: right; }
         #day-label { font-size: 22px; font-weight: 800; color: var(--text-main); text-transform: uppercase; line-height: 1; }
         #time-label { font-size: 34px; font-weight: 400; color: var(--text-main); margin-top: 4px; }
@@ -50,7 +64,6 @@
             background: var(--bg-white); border: 2px solid var(--border-grey); border-radius: 8px; padding: 8px 12px;
             min-width: 200px; display: none; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 8px;
         }
-        /* Weather box should always show */
         #weather-box { display: flex; }
         
         .box-icon { width: 32px; height: 32px; margin-right: 12px; object-fit: contain; }
@@ -67,7 +80,10 @@
 <body>
 
     <div id="main-widget" class="widget-main">
-        <img id="weather-icon" src="icons/clear-day.png" class="weather-icon">
+        <div class="weather-container">
+            <img id="weather-icon" src="icons/clear-day.png" class="weather-icon">
+            <div id="current-weather-label">LOADING...</div>
+        </div>
         <div class="text-stack">
             <div id="day-label">LOADING...</div>
             <div id="time-label">00:00</div>
@@ -234,6 +250,7 @@
 
             document.getElementById('day-label').innerText = days[(Math.floor(totalMinutes / 1440) + DAY_ANCHOR) % 7].toUpperCase();
             document.getElementById('time-label').innerText = timeStr;
+            document.getElementById('current-weather-label').innerText = currentRawWeather;
 
             if (timeStr !== lastTriggeredMinute) {
                 if (triggerSchedule[timeStr]) {
@@ -271,7 +288,6 @@
             const nextIdx = (loopData.index + 1) % weatherSchedule.length;
             const next = weatherSchedule[nextIdx];
 
-            // Toggle visibility based on SETTINGS
             weatherBox.style.display = SHOW_NEXT_WEATHER ? "flex" : "none";
 
             document.getElementById('weather-icon').src = getIconPath(current.weather, isDay);
