@@ -134,6 +134,7 @@
         const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
         const sasquatchAudio = new Audio('sasquatch.wav');
+        const survivalAudio = new Audio('survival.wav');
         
         const triggerSchedule = {
             "21:00": { name: "Yeti", actionId: "PASTE_YETI_ID" },
@@ -311,6 +312,9 @@
                         if (ev.msg) client.sendMessage(ev.msg);
                         if (ev.name.toLowerCase() === "bigfoot") {
                             sasquatchAudio.play().catch(e => console.log("Audio play deferred: ", e));
+                        }
+                        if (ev.name.toLowerCase() === "stoner survival") {
+                            survivalAudio.play().catch(e => console.log("Audio play deferred: ", e));
                         }
                         ev.notified = true;
                     }
