@@ -29,7 +29,7 @@ This is a high-performance, real-time overlay designed for the GTA community. It
 ### 1. OBS Browser Source Setup
 * **Add Source:** Create a new **Browser Source** in OBS.
 * **URL:** Point it to https://ironjeff80.github.io/GTA-World-Widget or your forks hosted GitHub Pages URL.
-* **Dimensions:** Set Width to **240** and Height to **420**
+* **Dimensions:** Set Width to **340** and Height to **420**
 * **Audio:** Check **"Control Audio via OBS"** to manage the alert volume through your OBS mixer.
 * **Sync:** Check **"Shutdown source when not visible"** and **"Refresh browser when scene becomes active"** to ensure the clock is always calibrated when you switch scenes.
 ![OBS Browser Source Settings](sourceConfig.png)
