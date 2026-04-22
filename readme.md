@@ -37,12 +37,14 @@ This is a high-performance, real-time overlay designed for the GTA community. It
 ### 2. Streamer.bot Integration (Make your own Fork of this repo)
 * **WebSocket:** Ensure your Streamer.bot server is running on `127.0.0.1:8080` (default).
 * **Automated Actions:** The widget triggers specific Action IDs for seasonal spawns (Yeti, Gooch, etc.) based on the in-game schedule.
-    Edit this section in the index.html. Set the time you want the action to fire and your action ID:
-            ```const triggerSchedule = {
-            "21:00": { name: "Yeti", actionId: "PASTE_YETI_ID" },
-            "03:00": { name: "Gooch", actionId: "PASTE_GOOCH_ID" },
-            "12:00": { name: "Snowman", actionId: "PASTE_SNOWMAN_ID" }
-        };```
+    * Edit this section in the `index.html`. Set the time you want the action to fire and your action ID:
+      ```javascript
+      const triggerSchedule = {
+          "21:00": { name: "Yeti", actionId: "PASTE_YETI_ID" },
+          "03:00": { name: "Gooch", actionId: "PASTE_GOOCH_ID" },
+          "12:00": { name: "Snowman", actionId: "PASTE_SNOWMAN_ID" }
+      };
+      ```
 * **Chat Integration:** The widget sends automated chat messages to your audience via Streamer.bot when rare events are spotted.
 
 ### 3. Customization (Settings Section if using your own fork)
