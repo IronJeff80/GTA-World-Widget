@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>GTA Widget - OBS Overlay</title>
@@ -8,6 +9,7 @@
         :root {
             --bg-white: rgba(255, 255, 255, 0.95);
             --bg-halloween: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 140, 0, 0.95) 100%);
+            --bg-active: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(144, 238, 144, 0.95) 100%);
             --border-grey: #cccccc;
             --text-main: #333333;
         }
@@ -23,60 +25,206 @@
         }
 
         .widget-main {
-            background: var(--bg-white);
+            background-image: url('icons/day.png'), url('icons/night.png');
+            background-position: center 0px, center 100px;
+            background-size: cover;
+            background-repeat: no-repeat;
             border: 2px solid var(--border-grey);
             border-radius: 12px;
             padding: 12px 18px;
             display: flex;
             align-items: center;
             min-width: 260px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
             margin-bottom: 10px;
-            transition: background 1s ease;
+            transition: background 1s ease, background-position 1s ease-in-out;
+            line-height: 1;
         }
 
-        .halloween-active { background: var(--bg-halloween); border-color: #ff8c00; }
-        .weather-icon { width: 64px; height: 64px; margin-right: 15px; object-fit: contain; }
-        
-        /* New styling for the left-aligned weather label */
-        .weather-container { display: flex; flex-direction: column; align-items: flex-start; }
-        #current-weather-label { 
-            font-size: 10px; 
-            font-weight: 800; 
-            color: #888; 
-            text-transform: uppercase; 
+        /* Night Mode text color override */
+        .night-mode #day-label,
+        .night-mode #time-label,
+        .night-mode #current-weather-label {
+            color: #ffffff !important;
+        }
+
+        .halloween-active {
+            background: var(--bg-halloween);
+            border-color: #ff8c00;
+        }
+
+        .event-active-status {
+            background: var(--bg-active) !important;
+            border-color: #2ecc71 !important;
+        }
+
+        .weather-icon {
+            width: 64px;
+            height: 64px;
+            margin-right: 15px;
+            object-fit: contain;
+        }
+
+        .weather-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        #current-weather-label {
+            font-size: 10px;
+            font-weight: 800;
+            color: #888;
+            text-transform: uppercase;
             margin-top: -5px;
             white-space: nowrap;
-            max-width: 64px; 
+            max-width: 64px;
             line-height: 1.1;
         }
 
-        .text-stack { display: flex; flex-direction: column; flex-grow: 1; text-align: right; }
-        #day-label { font-size: 22px; font-weight: 800; color: var(--text-main); text-transform: uppercase; line-height: 1; }
-        #time-label { font-size: 34px; font-weight: 400; color: var(--text-main); margin-top: 4px; }
-        .event-bar { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; max-width: 380px; margin-bottom: 10px; }
+        .text-stack {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            text-align: right;
+        }
+
+        #day-label {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-main);
+            text-transform: uppercase;
+            line-height: 1;
+        }
+
+        #time-label {
+            font-size: 34px;
+            font-weight: 400;
+            color: var(--text-main);
+            margin-top: 4px;
+        }
+
+        .event-bar {
+            display: flex;
+            gap: 0px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            width: 300px;
+            margin-bottom: 10px;
+        }
+
         .event-card {
-            background: var(--bg-white); border: 2px solid #666; border-radius: 8px; width: 52px; height: 52px;
-            display: flex; align-items: center; justify-content: center; padding: 4px;
+            background: var(--bg-white);
+            border: 2px solid #666;
+            border-radius: 8px;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            margin: 2px;
+            box-sizing: border-box;
         }
-        .event-card img { max-width: 100%; max-height: 100%; }
+
+        .event-card img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
         .info-box {
-            background: var(--bg-white); border: 2px solid var(--border-grey); border-radius: 8px; padding: 8px 12px;
-            min-width: 200px; display: none; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 8px;
+            background: var(--bg-white);
+            border: 2px solid var(--border-grey);
+            border-radius: 8px;
+            padding: 0 10px;
+            height: 48px;
+            /* Matched to event-card height */
+            min-width: 200px;
+            display: none;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 8px;
+            transition: background 0.5s ease;
+            box-sizing: border-box;
         }
-        #weather-box { display: flex; }
-        
-        .box-icon { width: 32px; height: 32px; margin-right: 12px; object-fit: contain; }
-        .box-content { display: flex; flex-direction: column; flex-grow: 1; text-align: right; }
-        .box-label { font-size: 11px; font-weight: 800; color: #888; text-transform: uppercase; display: block; }
-        .box-val-row { display: flex; justify-content: flex-end; align-items: baseline; }
-        .box-val { font-size: 16px; font-weight: 800; color: var(--text-main); }
-        .box-timer { font-size: 18px; font-family: monospace; color: #e74c3c; font-weight: bold; margin-left: 8px; }
-        #debug-box { border-color: #c0392b; background: #fffcfc; min-width: 260px; display: none; }
-        .debug-text { font-family: monospace; font-size: 12px; color: #c0392b; font-weight: bold; line-height: 1.4; }
-        #debug-log { color: #2980b9; margin-top: 4px; border-top: 1px solid #ecc; padding-top: 4px; font-size: 11px; }
+
+        #weather-box {
+            display: flex;
+        }
+
+        .box-icon {
+            width: 28px;
+            height: 28px;
+            margin-right: 10px;
+            object-fit: contain;
+        }
+
+        .box-content {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            text-align: right;
+            justify-content: center;
+        }
+
+        .box-label {
+            font-size: 9px;
+            font-weight: 800;
+            color: #888;
+            text-transform: uppercase;
+            display: block;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+
+        .box-val-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: baseline;
+            line-height: 1;
+        }
+
+        .box-val {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .box-timer {
+            font-size: 14px;
+            font-family: monospace;
+            color: #e74c3c;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        #debug-box {
+            border-color: #c0392b;
+            background: #fffcfc;
+            min-width: 260px;
+            display: none;
+            height: auto;
+            padding: 10px;
+        }
+
+        .debug-text {
+            font-family: monospace;
+            font-size: 12px;
+            color: #c0392b;
+            font-weight: bold;
+            line-height: 1.4;
+        }
+
+        #debug-log {
+            color: #2980b9;
+            margin-top: 4px;
+            border-top: 1px solid #ecc;
+            padding-top: 4px;
+            font-size: 11px;
+        }
     </style>
 </head>
+
 <body>
 
     <div id="main-widget" class="widget-main">
@@ -141,17 +289,16 @@
         // SETTINGS
         const SHOW_DIAGNOSTICS = false;
         const SHOW_NEXT_WEATHER = false;
-        const CURRENT_SEASON = "420WEEK"; 
-        const SEASON_START   = "2026-04-16";
-        const SEASON_END     = "2026-04-29";
-        const DAY_ANCHOR     = 6; // Saturday alignment
-        const LOOP_MAX       = 384;
+        const CURRENT_SEASON = "420WEEK";
+        const SEASON_START = "2026-04-16";
+        const SEASON_END = "2026-04-29";
+        const DAY_ANCHOR = 6;
+        const LOOP_MAX = 384;
 
         const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
         const sasquatchAudio = new Audio('./sasquatch.wav');
         const survivalAudio = new Audio('./survival.wav');
-        
+
         const triggerSchedule = {
             "21:00": { name: "Yeti", actionId: "PASTE_YETI_ID" },
             "03:00": { name: "Gooch", actionId: "PASTE_GOOCH_ID" },
@@ -175,34 +322,34 @@
         };
 
         const weatherSchedule = [
-            {"weather": "Partly Cloudy", "duration": 4}, {"weather": "Misty", "duration": 3},
-            {"weather": "Mostly Cloudy", "duration": 4}, {"weather": "Clear", "duration": 3},
-            {"weather": "Misty", "duration": 2}, {"weather": "Clear", "duration": 12},
-            {"weather": "Misty", "duration": 3}, {"weather": "Clear", "duration": 10},
-            {"weather": "Hazy", "duration": 4}, {"weather": "Partly Cloudy", "duration": 7},
-            {"weather": "Misty", "duration": 3}, {"weather": "Cloudy", "duration": 7},
-            {"weather": "Foggy", "duration": 4}, {"weather": "Cloudy", "duration": 6},
-            {"weather": "Partly Cloudy", "duration": 6}, {"weather": "Foggy", "duration": 4},
-            {"weather": "Cloudy", "duration": 10}, {"weather": "Mostly Clear", "duration": 12},
-            {"weather": "Partly Cloudy", "duration": 1}, {"weather": "Drizzling", "duration": 3},
-            {"weather": "Partly Cloudy", "duration": 17}, {"weather": "Misty", "duration": 3},
-            {"weather": "Partly Cloudy", "duration": 3}, {"weather": "Raining", "duration": 3},
-            {"weather": "Drizzling", "duration": 3}, {"weather": "Cloudy", "duration": 11},
-            {"weather": "Misty", "duration": 3}, {"weather": "Mostly Cloudy", "duration": 4},
-            {"weather": "Foggy", "duration": 4}, {"weather": "Clear", "duration": 17},
-            {"weather": "Mostly Clear", "duration": 20}, {"weather": "Foggy", "duration": 5},
-            {"weather": "Partly Cloudy", "duration": 19}, {"weather": "Misty", "duration": 2},
-            {"weather": "Mostly Clear", "duration": 22}, {"weather": "Misty", "duration": 2},
-            {"weather": "Mostly Clear", "duration": 1}, {"weather": "Raining", "duration": 3},
-            {"weather": "Drizzling", "duration": 2}, {"weather": "Partly Cloudy", "duration": 16},
-            {"weather": "Misty", "duration": 2}, {"weather": "Partly Cloudy", "duration": 2},
-            {"weather": "Cloudy", "duration": 5}, {"weather": "Partly Cloudy", "duration": 15},
-            {"weather": "Misty", "duration": 3}, {"weather": "Partly Cloudy", "duration": 5},
-            {"weather": "Mostly Cloudy", "duration": 6}, {"weather": "Partly Cloudy", "duration": 12},
-            {"weather": "Mostly Cloudy", "duration": 12}, {"weather": "Partly Cloudy", "duration": 7},
-            {"weather": "Clear", "duration": 30}, {"weather": "Partly Cloudy", "duration": 2},
-            {"weather": "Raining", "duration": 7}, {"weather": "Drizzling", "duration": 1},
-            {"weather": "Partly Cloudy", "duration": 7}
+            { "weather": "Partly Cloudy", "duration": 4 }, { "weather": "Misty", "duration": 3 },
+            { "weather": "Mostly Cloudy", "duration": 4 }, { "weather": "Clear", "duration": 3 },
+            { "weather": "Misty", "duration": 2 }, { "weather": "Clear", "duration": 12 },
+            { "weather": "Misty", "duration": 3 }, { "weather": "Clear", "duration": 10 },
+            { "weather": "Hazy", "duration": 4 }, { "weather": "Partly Cloudy", "duration": 7 },
+            { "weather": "Misty", "duration": 3 }, { "weather": "Cloudy", "duration": 7 },
+            { "weather": "Foggy", "duration": 4 }, { "weather": "Cloudy", "duration": 6 },
+            { "weather": "Partly Cloudy", "duration": 6 }, { "weather": "Foggy", "duration": 4 },
+            { "weather": "Cloudy", "duration": 10 }, { "weather": "Mostly Clear", "duration": 12 },
+            { "weather": "Partly Cloudy", "duration": 1 }, { "weather": "Drizzling", "duration": 3 },
+            { "weather": "Partly Cloudy", "duration": 17 }, { "weather": "Misty", "duration": 3 },
+            { "weather": "Partly Cloudy", "duration": 3 }, { "weather": "Raining", "duration": 3 },
+            { "weather": "Drizzling", "duration": 3 }, { "weather": "Cloudy", "duration": 11 },
+            { "weather": "Misty", "duration": 3 }, { "weather": "Mostly Cloudy", "duration": 4 },
+            { "weather": "Foggy", "duration": 4 }, { "weather": "Clear", "duration": 17 },
+            { "weather": "Mostly Clear", "duration": 20 }, { "weather": "Foggy", "duration": 5 },
+            { "weather": "Partly Cloudy", "duration": 19 }, { "weather": "Misty", "duration": 2 },
+            { "weather": "Mostly Clear", "duration": 22 }, { "weather": "Misty", "duration": 2 },
+            { "weather": "Mostly Clear", "duration": 1 }, { "weather": "Raining", "duration": 3 },
+            { "weather": "Drizzling", "duration": 2 }, { "weather": "Partly Cloudy", "duration": 16 },
+            { "weather": "Misty", "duration": 2 }, { "weather": "Partly Cloudy", "duration": 2 },
+            { "weather": "Cloudy", "duration": 5 }, { "weather": "Partly Cloudy", "duration": 15 },
+            { "weather": "Misty", "duration": 3 }, { "weather": "Partly Cloudy", "duration": 5 },
+            { "weather": "Mostly Cloudy", "duration": 6 }, { "weather": "Partly Cloudy", "duration": 12 },
+            { "weather": "Mostly Cloudy", "duration": 12 }, { "weather": "Partly Cloudy", "duration": 7 },
+            { "weather": "Clear", "duration": 30 }, { "weather": "Partly Cloudy", "duration": 2 },
+            { "weather": "Raining", "duration": 7 }, { "weather": "Drizzling", "duration": 1 },
+            { "weather": "Partly Cloudy", "duration": 7 }
         ];
 
         const client = new StreamerbotClient({ host: '127.0.0.1', port: 8080 });
@@ -210,11 +357,17 @@
         let lastTriggeredMinute = "";
 
         function getLoopPosition(totalHours) {
-            const loopHr = totalHours % LOOP_MAX;
+            const loopHrFull = totalHours % LOOP_MAX;
+            const loopHrFloored = Math.floor(loopHrFull);
+
             let acc = 0;
             for (let i = 0; i < weatherSchedule.length; i++) {
-                if (loopHr >= acc && loopHr < (acc + weatherSchedule[i].duration)) {
-                    return { index: i, hourInLoop: loopHr, remaining: (acc + weatherSchedule[i].duration) - loopHr };
+                if (loopHrFloored >= acc && loopHrFloored < (acc + weatherSchedule[i].duration)) {
+                    return {
+                        index: i,
+                        hourInLoop: loopHrFloored,
+                        remaining: (acc + weatherSchedule[i].duration) - loopHrFull
+                    };
                 }
                 acc += weatherSchedule[i].duration;
             }
@@ -224,15 +377,16 @@
         function update() {
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
-            const rawUnix = Math.floor(now.getTime() / 1000);
-            
-            const totalMinutes = Math.floor(rawUnix / 2);
-            const totalHours = Math.floor(totalMinutes / 60);
+            const rawUnix = now.getTime() / 1000;
+            const totalSeconds = rawUnix / 2;
+            const totalMinutes = totalSeconds;
+            const totalHours = totalMinutes / 60;
             const h = Math.floor(totalMinutes / 60) % 24;
-            const m = totalMinutes % 60;
-            const decHour = h + (m / 60);
+            const m = Math.floor(totalMinutes % 60);
+            const decHour = h + (m / 60) + ((rawUnix % 2) / 120);
             const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-            
+            const displayUnix = Math.floor(rawUnix);
+
             const loopData = getLoopPosition(totalHours);
             const currentRawWeather = weatherSchedule[loopData.index].weather;
 
@@ -256,26 +410,25 @@
                 if (triggerSchedule[timeStr]) {
                     const action = triggerSchedule[timeStr];
                     client.doAction(action.actionId, { eventName: action.name });
-                    if(SHOW_DIAGNOSTICS) document.getElementById('debug-log').innerText = `TRIGGER: ${action.name} @ ${timeStr}`;
+                    if (SHOW_DIAGNOSTICS) document.getElementById('debug-log').innerText = `TRIGGER: ${action.name} @ ${timeStr}`;
                 }
                 lastTriggeredMinute = timeStr;
             }
 
             if (m === 0 && h !== lastLoggedHour) {
-                if(SHOW_DIAGNOSTICS) document.getElementById('debug-log').innerText = `SYNC CAPTURE: Game ${h}:00 @ Unix ${rawUnix}`;
+                if (SHOW_DIAGNOSTICS) document.getElementById('debug-log').innerText = `SYNC CAPTURE: Game ${h}:00 @ Unix ${rawUnix}`;
                 lastLoggedHour = h;
             }
 
-            // Visibility Logic for 420 Blocks
             const is420Active = (CURRENT_SEASON === "420WEEK" && todayStr >= SEASON_START && todayStr <= SEASON_END);
             document.getElementById('bigfoot-box').style.display = is420Active ? "flex" : "none";
             document.getElementById('survival-box').style.display = is420Active ? "flex" : "none";
 
             updateWeatherDisplay(loopData, h, m, todayStr);
             updateEventCards(todayStr, decHour, currentRawWeather);
-            
+
             if (is420Active) {
-                findNextBigfoot(loopData, decHour, rawUnix);
+                findNextBigfoot(loopData, decHour, rawUnix, currentRawWeather);
                 findNextSurvival(decHour, rawUnix);
             }
         }
@@ -288,19 +441,25 @@
             const nextIdx = (loopData.index + 1) % weatherSchedule.length;
             const next = weatherSchedule[nextIdx];
 
-            weatherBox.style.display = SHOW_NEXT_WEATHER ? "flex" : "none";
+            if (isDay) {
+                widget.style.backgroundPosition = "center 0px, center 100px";
+                widget.classList.remove('night-mode');
+            } else {
+                widget.style.backgroundPosition = "center -100px, center 0px";
+                widget.classList.add('night-mode');
+            }
 
+            weatherBox.style.display = SHOW_NEXT_WEATHER ? "flex" : "none";
             document.getElementById('weather-icon').src = getIconPath(current.weather, isDay);
-            
-            const finalSeconds = Math.floor(loopData.remaining * 120) - (m * 2); 
-            
+
+            const finalSeconds = Math.floor(loopData.remaining * 120) - (m * 2);
             document.getElementById('next-name').innerText = next.weather;
             document.getElementById('next-timer').innerText = formatTimer(finalSeconds);
             document.getElementById('next-weather-icon').src = getIconPath(next.weather, isDay);
 
             const isHalloweenWeek = (today >= SEASON_START && today <= SEASON_END);
-            const isHalloweenHours = ((h * 60) + m >= 1140 || (h * 60) + m < 480); 
-            
+            const isHalloweenHours = ((h * 60) + m >= 1140 || (h * 60) + m < 480);
+
             if (CURRENT_SEASON === "HALLOWEEN" && isHalloweenWeek && isHalloweenHours) {
                 widget.classList.add('halloween-active');
             } else {
@@ -323,76 +482,113 @@
                     card.className = 'event-card';
                     card.innerHTML = `<img src="icons/${ev.icon}">`;
                     bar.appendChild(card);
-                    
+
                     if (!ev.notified) {
                         if (ev.msg) client.sendMessage(ev.msg);
                         if (ev.name.toLowerCase() === "bigfoot") {
-                            sasquatchAudio.play().catch(e => console.log("Audio play deferred: ", e));
+                            sasquatchAudio.play().catch(e => console.log("Audio deferred", e));
                         }
                         if (ev.name.toLowerCase() === "stoner survival") {
-                            survivalAudio.play().catch(e => console.log("Audio play deferred: ", e));
+                            survivalAudio.play().catch(e => console.log("Audio deferred", e));
                         }
                         ev.notified = true;
                     }
                 } else {
-                    ev.notified = false; 
+                    ev.notified = false;
                 }
             });
         }
 
         function findNextSurvival(decHour, currentUnix) {
-            const survivalStart = 16.33; 
-            let waitHours = survivalStart - decHour;
-            if (waitHours < 0) waitHours += 24;
-            const secondsUntil = Math.max(0, Math.floor(waitHours * 120));
-            const spawnDate = new Date((currentUnix + secondsUntil) * 1000);
-            document.getElementById('survival-val').innerText = spawnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            document.getElementById('survival-timer').innerText = formatLongTimer(secondsUntil);
+            const survivalStart = 16.33;
+            const survivalEnd = 20.33;
+            const box = document.getElementById('survival-box');
+
+            if (decHour >= survivalStart && decHour < survivalEnd) {
+                box.classList.add('event-active-status');
+                const remainingHours = survivalEnd - decHour;
+                const secondsLeft = Math.max(0, Math.floor(remainingHours * 120));
+                document.getElementById('survival-val').innerText = "ACTIVE";
+                document.getElementById('survival-timer').innerText = formatLongTimer(secondsLeft);
+            } else {
+                box.classList.remove('event-active-status');
+                let waitHours = survivalStart - decHour;
+                if (waitHours < 0) waitHours += 24;
+                const secondsUntil = Math.max(0, Math.floor(waitHours * 120));
+                const spawnDate = new Date((currentUnix + secondsUntil) * 1000);
+                document.getElementById('survival-val').innerText = spawnDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                document.getElementById('survival-timer').innerText = formatLongTimer(secondsUntil);
+            }
         }
 
-        function findNextBigfoot(loopData, decHour, currentUnix) {
-            const BF_START = 3.5; 
-            const BF_END = 8.5;    
+        function findNextBigfoot(loopData, decHour, currentUnix, currentWeather) {
+            const BF_START = 3.5;
+            const BF_END = 8.5;
+            const box = document.getElementById('bigfoot-box');
+            const timerElem = document.getElementById('bigfoot-timer');
+            const valElem = document.getElementById('bigfoot-val');
+
+            // 1. Check if currently active
+            if (decHour >= BF_START && decHour < BF_END && currentWeather.toLowerCase() === "foggy") {
+                box.classList.add('event-active-status');
+                const remainingHours = BF_END - decHour;
+                const secondsLeft = Math.max(0, Math.floor(remainingHours * 120));
+                valElem.innerText = "ACTIVE";
+                timerElem.innerText = formatLongTimer(secondsLeft);
+                return;
+            }
+
+            box.classList.remove('event-active-status');
             let checkIdx = loopData.index;
-            let cumulativeWaitHours = 0; 
-            
+
+            // PRECISION FIX: Account for the time already spent in the current game hour
+            // This ensures the timer ticks down seconds, not just minutes.
+            let cumulativeWaitHours = loopData.remaining - (24 - (decHour % 24));
+            // Simplified: we start at 0 relative to "now"
+            cumulativeWaitHours = 0;
+
             for (let i = 0; i < weatherSchedule.length * 2; i++) {
                 let block = weatherSchedule[checkIdx % weatherSchedule.length];
+                let currentRemaining = (i === 0 ? loopData.remaining : block.duration);
+
                 let blockStartInGameDay = (decHour + cumulativeWaitHours) % 24;
-                let blockEndInGameDay = (blockStartInGameDay + (i === 0 ? loopData.remaining : block.duration)) % 24;
+                let blockEndInGameDay = (blockStartInGameDay + currentRemaining);
+
                 const isFoggy = block.weather.toLowerCase() === "foggy";
 
                 if (isFoggy) {
                     let targetHour = -1;
-                    if (blockStartInGameDay <= BF_START && blockEndInGameDay >= BF_START) {
+
+                    if (blockStartInGameDay <= BF_START && blockEndInGameDay > BF_START) {
                         targetHour = BF_START;
-                    } else if (blockStartInGameDay > BF_START && blockStartInGameDay < BF_END) {
+                    }
+                    else if (blockStartInGameDay > BF_START && blockStartInGameDay < BF_END) {
                         targetHour = blockStartInGameDay;
                     }
 
                     if (targetHour !== -1) {
                         let hoursToWait = cumulativeWaitHours;
-                        if (targetHour > blockStartInGameDay) hoursToWait += (targetHour - blockStartInGameDay);
-                        const currentHourProgress = decHour % 1;
-                        const secondsUntil = Math.max(0, Math.floor((hoursToWait - currentHourProgress) * 120));
-
-                        if (secondsUntil <= 0 && (decHour >= BF_START && decHour <= BF_END)) {
-                            document.getElementById('bigfoot-val').innerText = "NOW";
-                            document.getElementById('bigfoot-timer').innerText = "00:00:00";
-                        } else {
-                            const targetUnix = currentUnix + secondsUntil;
-                            const spawnDate = new Date(targetUnix * 1000);
-                            document.getElementById('bigfoot-val').innerText = spawnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                            document.getElementById('bigfoot-timer').innerText = formatLongTimer(secondsUntil);
+                        if (targetHour > blockStartInGameDay) {
+                            hoursToWait += (targetHour - blockStartInGameDay);
                         }
+
+                        // Convert game hours to real-world seconds (1 game hour = 120 real seconds)
+                        const secondsUntil = Math.max(0, Math.floor(hoursToWait * 120));
+                        const targetUnix = currentUnix + secondsUntil;
+                        const spawnDate = new Date(targetUnix * 1000);
+
+                        valElem.innerText = spawnDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        timerElem.innerText = formatLongTimer(secondsUntil);
                         return;
                     }
                 }
-                cumulativeWaitHours += (i === 0) ? loopData.remaining : block.duration;
+
+                cumulativeWaitHours += currentRemaining;
                 checkIdx++;
             }
-            document.getElementById('bigfoot-val').innerText = "N/A";
-            document.getElementById('bigfoot-timer').innerText = "00:00:00";
+
+            valElem.innerText = "N/A";
+            timerElem.innerText = "00:00:00";
         }
 
         function getIconPath(n, d) {
@@ -427,4 +623,5 @@
         update();
     </script>
 </body>
+
 </html>
